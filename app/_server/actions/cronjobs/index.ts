@@ -4,6 +4,9 @@ import {
   getCronJobs,
   addCronJob,
   cleanupCrontab,
+  deleteCronJob,
+  pauseCronJob,
+  resumeCronJob,
   readUserCrontab,
   writeUserCrontab,
   findJobIndex,
@@ -14,6 +17,8 @@ import { getAllTargetUsers } from "@/app/_utils/crontab-utils";
 import { revalidatePath } from "next/cache";
 import { getScriptPathForCron } from "@/app/_server/actions/scripts";
 import { isDocker } from "@/app/_server/actions/global";
+import { isMacOS } from "@/app/_utils/platform-utils";
+import os from "os";
 import {
   runJobSynchronously,
   runJobInBackground,
@@ -95,6 +100,15 @@ export const removeCronJob = async (
   jobData: { id: string; schedule: string; command: string; comment?: string; user: string }
 ): Promise<{ success: boolean; message: string; details?: string }> => {
   try {
+    if (isMacOS()) {
+      const success = await deleteCronJob(jobData.id);
+      if (success) {
+        revalidatePath("/");
+        return { success: true, message: "Cron job deleted successfully" };
+      }
+      return { success: false, message: "Failed to delete cron job" };
+    }
+
     const cronContent = await readUserCrontab(jobData.user);
     const lines = cronContent.split("\n");
 
@@ -207,6 +221,15 @@ export const pauseCronJobAction = async (
   jobData: { id: string; schedule: string; command: string; comment?: string; user: string }
 ): Promise<{ success: boolean; message: string; details?: string }> => {
   try {
+    if (isMacOS()) {
+      const success = await pauseCronJob(jobData.id);
+      if (success) {
+        revalidatePath("/");
+        return { success: true, message: "Cron job paused successfully" };
+      }
+      return { success: false, message: "Failed to pause cron job" };
+    }
+
     const cronContent = await readUserCrontab(jobData.user);
     const lines = cronContent.split("\n");
 
@@ -240,6 +263,15 @@ export const resumeCronJobAction = async (
   jobData: { id: string; schedule: string; command: string; comment?: string; user: string }
 ): Promise<{ success: boolean; message: string; details?: string }> => {
   try {
+    if (isMacOS()) {
+      const success = await resumeCronJob(jobData.id);
+      if (success) {
+        revalidatePath("/");
+        return { success: true, message: "Cron job resumed successfully" };
+      }
+      return { success: false, message: "Failed to resume cron job" };
+    }
+
     const cronContent = await readUserCrontab(jobData.user);
     const lines = cronContent.split("\n");
 
@@ -270,6 +302,10 @@ export const resumeCronJobAction = async (
 };
 
 export const fetchAvailableUsers = async (): Promise<string[]> => {
+  if (isMacOS()) {
+    return [process.env.USER || os.userInfo().username];
+  }
+
   try {
     return await getAllTargetUsers();
   } catch (error) {

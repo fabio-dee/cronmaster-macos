@@ -450,6 +450,10 @@ export const resumeCronJob = async (id: string): Promise<boolean> => {
 };
 
 export const cleanupCrontab = async (): Promise<boolean> => {
+  if (isMacOS()) {
+    return true;
+  }
+
   try {
     const userCrontabs = await getAllUsers();
 

@@ -8,6 +8,7 @@ import os from "os";
 import { CronJob } from "./cronjob-utils";
 import { SchedulerBackend } from "./scheduler-backend";
 import { cronToLaunchd, LaunchdSchedule, CalendarInterval } from "./cron-to-launchd";
+import { DATA_DIR } from "../_consts/file";
 import {
   readJobMetadata,
   writeJobMetadata,
@@ -181,7 +182,7 @@ function buildCommand(
     ensureWrapperScriptInData();
     const wrapperPath = path.join(
       process.cwd(),
-      "data",
+      DATA_DIR,
       "cron-log-wrapper.sh"
     );
     return `${wrapperPath} "${jobId}" ${rawCommand}`;
