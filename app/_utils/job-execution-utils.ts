@@ -1,5 +1,6 @@
 import { exec, spawn } from "child_process";
 import { promisify } from "util";
+import os from "os";
 import { CronJob } from "./cronjob-utils";
 import { getUserInfo } from "./crontab-utils";
 import { NSENTER_RUN_JOB } from "../_consts/nsenter";
@@ -37,7 +38,7 @@ export const runJobSynchronously = async (
 
   const { stdout, stderr } = await execAsync(command, {
     timeout: 300000,
-    cwd: process.env.HOME || "/home",
+    cwd: process.env.HOME || os.homedir(),
   });
 
   const output = stdout || stderr || "Command executed successfully";

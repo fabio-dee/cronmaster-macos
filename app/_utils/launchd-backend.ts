@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import { readdir, writeFile, unlink, mkdir, readFile } from "fs/promises";
+import { writeFile, unlink, mkdir, readFile } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import os from "os";
@@ -16,7 +16,6 @@ import {
   JobMetadata,
 } from "./jobs-metadata-utils";
 import {
-  wrapCommandWithLogger,
   unwrapCommand,
   isCommandWrapped,
   ensureWrapperScriptInData,
@@ -170,15 +169,6 @@ async function launchctlUnload(id: string): Promise<void> {
     await execAsync(`launchctl unload "${pPath}"`);
   } catch {
     // May fail if not loaded — safe to ignore
-  }
-}
-
-async function isJobLoaded(id: string): Promise<boolean> {
-  try {
-    await execAsync(`launchctl list "${plistLabel(id)}"`);
-    return true;
-  } catch {
-    return false;
   }
 }
 

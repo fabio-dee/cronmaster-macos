@@ -25,6 +25,9 @@ import {
   isCommandWrapped,
 } from "@/app/_utils/wrapper-utils";
 import { generateShortUUID } from "@/app/_utils/uuid-utils";
+import os from "os";
+import { isMacOS } from "@/app/_utils/platform-utils";
+import { LaunchdBackend } from "@/app/_utils/launchd-backend";
 
 const execAsync = promisify(exec);
 
@@ -105,6 +108,30 @@ const getAllUsers = async (): Promise<{ user: string; content: string }[]> => {
 export const getCronJobs = async (
   includeLogErrors: boolean = true
 ): Promise<CronJob[]> => {
+  if (isMacOS()) {
+    try {
+      const backend = new LaunchdBackend();
+      let jobs = await backend.listJobs();
+
+      if (includeLogErrors) {
+        const { getAllJobLogErrors } = await import(
+          "@/app/_server/actions/logs"
+        );
+        const jobIds = jobs.map((job) => job.id);
+        const errorMap = await getAllJobLogErrors(jobIds);
+        jobs = jobs.map((job) => ({
+          ...job,
+          logError: errorMap.get(job.id),
+        }));
+      }
+
+      return jobs;
+    } catch (error) {
+      console.error("Error getting launchd jobs:", error);
+      return [];
+    }
+  }
+
   try {
     const userCrontabs = await getAllUsers();
     let allJobs: CronJob[] = [];
@@ -143,6 +170,21 @@ export const addCronJob = async (
   user?: string,
   logsEnabled: boolean = false
 ): Promise<boolean> => {
+  if (isMacOS()) {
+    const backend = new LaunchdBackend();
+    const jobId = generateShortUUID();
+    const currentUser =
+      user || process.env.USER || os.userInfo().username;
+    return backend.addJob({
+      id: jobId,
+      schedule,
+      command,
+      comment,
+      user: currentUser,
+      logsEnabled,
+    });
+  }
+
   try {
     const jobId = generateShortUUID();
 
@@ -220,6 +262,11 @@ export const addCronJob = async (
 };
 
 export const deleteCronJob = async (id: string): Promise<boolean> => {
+  if (isMacOS()) {
+    const backend = new LaunchdBackend();
+    return backend.deleteJob(id);
+  }
+
   try {
     const allJobs = await getCronJobs(false);
     const targetJob = allJobs.find((j) => j.id === id);
@@ -263,6 +310,16 @@ export const updateCronJob = async (
   comment: string = "",
   logsEnabled: boolean = false
 ): Promise<boolean> => {
+  if (isMacOS()) {
+    const backend = new LaunchdBackend();
+    return backend.updateJob(jobData.id, {
+      schedule,
+      command,
+      comment,
+      logsEnabled,
+    });
+  }
+
   try {
     const user = jobData.user;
     const cronContent = await readUserCrontab(user);
@@ -321,6 +378,11 @@ export const updateCronJob = async (
 };
 
 export const pauseCronJob = async (id: string): Promise<boolean> => {
+  if (isMacOS()) {
+    const backend = new LaunchdBackend();
+    return backend.pauseJob(id);
+  }
+
   try {
     const allJobs = await getCronJobs(false);
     const targetJob = allJobs.find((j) => j.id === id);
@@ -352,6 +414,11 @@ export const pauseCronJob = async (id: string): Promise<boolean> => {
 };
 
 export const resumeCronJob = async (id: string): Promise<boolean> => {
+  if (isMacOS()) {
+    const backend = new LaunchdBackend();
+    return backend.resumeJob(id);
+  }
+
   try {
     const allJobs = await getCronJobs(false);
     const targetJob = allJobs.find((j) => j.id === id);
