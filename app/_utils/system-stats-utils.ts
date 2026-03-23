@@ -1,6 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as si from "systeminformation";
+import { isMacOS } from "@/app/_utils/platform-utils";
 
 const execAsync = promisify(exec);
 
@@ -24,9 +25,10 @@ export const formatUptime = (seconds: number): string => {
 
 export const getPing = async (): Promise<number> => {
   try {
-    const { stdout } = await execAsync(
-      'ping -c 1 -W 1000 8.8.8.8 2>/dev/null || echo "timeout"'
-    );
+    const cmd = isMacOS()
+      ? 'ping -c 1 -t 2 8.8.8.8 2>/dev/null || echo "timeout"'
+      : 'ping -c 1 -W 1000 8.8.8.8 2>/dev/null || echo "timeout"';
+    const { stdout } = await execAsync(cmd);
     const match = stdout.match(/time=(\d+\.?\d*)/);
     return match ? Math.round(parseFloat(match[1])) : 0;
   } catch (error) {

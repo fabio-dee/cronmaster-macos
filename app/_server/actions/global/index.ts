@@ -84,3 +84,5 @@ export const getHostScriptsPath = async (): Promise<string | null> => {
     return null;
   }
 };
+
+export const isMacOS = async (): Promise<boolean> => process.platform === "darwin";
