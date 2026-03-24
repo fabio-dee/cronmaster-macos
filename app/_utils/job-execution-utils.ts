@@ -4,6 +4,7 @@ import os from "os";
 import { CronJob } from "./cronjob-utils";
 import { getUserInfo } from "./crontab-utils";
 import { NSENTER_RUN_JOB } from "../_consts/nsenter";
+import { ensureWrapperScriptInData } from "./wrapper-utils";
 import {
   saveRunningJob,
   updateRunningJob,
@@ -75,8 +76,9 @@ export const runJobInBackground = async (
     command = "sh";
     shellArgs = ["-c", nsenterCmd];
   } else {
-    command = "sh";
-    shellArgs = ["-c", job.command];
+    const wrapperPath = ensureWrapperScriptInData();
+    command = "bash";
+    shellArgs = [wrapperPath, logFolderName, job.command];
   }
 
   const child = spawn(command, shellArgs, {

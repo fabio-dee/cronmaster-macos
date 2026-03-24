@@ -1,0 +1,8 @@
+#!/bin/bash
+# Cronmaster Job Runner
+# All cronmaster launchd jobs use this as their Program
+# so they appear as "cronmaster-runner" in System Settings
+# instead of individual "bash" entries.
+#
+# Usage: cronmaster-runner <command>
+exec /bin/bash -c "$*"

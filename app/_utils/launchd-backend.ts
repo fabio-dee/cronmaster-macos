@@ -20,6 +20,7 @@ import {
   unwrapCommand,
   isCommandWrapped,
   ensureWrapperScriptInData,
+  ensureRunnerScriptInData,
 } from "./wrapper-utils";
 
 const execAsync = promisify(exec);
@@ -107,6 +108,7 @@ function generateScheduleXml(schedule: LaunchdSchedule): string {
 
 function generatePlist(
   label: string,
+  runnerPath: string,
   command: string,
   schedule: LaunchdSchedule,
   stdoutPath: string,
@@ -123,10 +125,12 @@ function generatePlist(
     <key>Label</key>
     <string>${escapeXml(label)}</string>
 
+    <key>AssociatedBundleIdentifiers</key>
+    <string>com.cronmaster.app</string>
+
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>-c</string>
+        <string>${escapeXml(runnerPath)}</string>
         <string>${escapedCommand}</string>
     </array>
 
@@ -221,9 +225,13 @@ export class LaunchdBackend implements SchedulerBackend {
       let command = "";
       try {
         const plistContent = await readFile(pPath, "utf-8");
-        const cmdMatch = plistContent.match(
-          /<key>ProgramArguments<\/key>\s*<array>\s*<string>[^<]*<\/string>\s*<string>[^<]*<\/string>\s*<string>([^<]*)<\/string>/
-        );
+        const cmdMatch =
+          plistContent.match(
+            /<key>ProgramArguments<\/key>\s*<array>\s*<string>[^<]*<\/string>\s*<string>([^<]*)<\/string>\s*<\/array>/
+          ) ||
+          plistContent.match(
+            /<key>ProgramArguments<\/key>\s*<array>\s*<string>[^<]*<\/string>\s*<string>[^<]*<\/string>\s*<string>([^<]*)<\/string>/
+          );
         if (cmdMatch) {
           command = cmdMatch[1]
             .replace(/&amp;/g, "&")
@@ -273,6 +281,7 @@ export class LaunchdBackend implements SchedulerBackend {
         input.logsEnabled
       );
 
+      const runnerPath = ensureRunnerScriptInData();
       const label = plistLabel(input.id);
       const logDir = path.join(
         process.cwd(),
@@ -285,6 +294,7 @@ export class LaunchdBackend implements SchedulerBackend {
 
       const plistContent = generatePlist(
         label,
+        runnerPath,
         finalCommand,
         schedule,
         stdoutPath,
@@ -336,6 +346,7 @@ export class LaunchdBackend implements SchedulerBackend {
       const schedule = cronToLaunchd(input.schedule);
       const finalCommand = buildCommand(id, input.command, input.logsEnabled);
 
+      const runnerPath = ensureRunnerScriptInData();
       const label = plistLabel(id);
       const logDir = path.join(process.cwd(), "data", "logs", id);
       const stdoutPath = path.join(logDir, "launchd-stdout.log");
@@ -343,6 +354,7 @@ export class LaunchdBackend implements SchedulerBackend {
 
       const plistContent = generatePlist(
         label,
+        runnerPath,
         finalCommand,
         schedule,
         stdoutPath,

@@ -1,4 +1,4 @@
-import { existsSync, copyFileSync } from "fs";
+import { existsSync, copyFileSync, chmodSync } from "fs";
 import path from "path";
 import { DATA_DIR } from "../_consts/file";
 import { getHostDataPath } from "../_server/actions/global";
@@ -16,6 +16,35 @@ export const generateLogFolderName = (
   comment?: string
 ): string => {
   return jobId;
+};
+
+export const ensureRunnerScriptInData = (): string => {
+  const sourceScriptPath = path.join(
+    process.cwd(),
+    "app",
+    "_scripts",
+    "cronmaster-runner"
+  );
+  const dataScriptPath = path.join(
+    process.cwd(),
+    DATA_DIR,
+    "cronmaster-runner"
+  );
+
+  if (!existsSync(dataScriptPath)) {
+    try {
+      copyFileSync(sourceScriptPath, dataScriptPath);
+      chmodSync(dataScriptPath, 0o755);
+    } catch (error) {
+      console.error(
+        "Failed to copy runner script to data directory:",
+        error
+      );
+      return sourceScriptPath;
+    }
+  }
+
+  return dataScriptPath;
 };
 
 export const ensureWrapperScriptInData = (): string => {
